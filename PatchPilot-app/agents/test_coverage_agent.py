@@ -1,0 +1,2 @@
+class TestCoverageAgent:
+    pass

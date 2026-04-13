@@ -1,0 +1,2 @@
+class PRSummaryAgent:
+    pass

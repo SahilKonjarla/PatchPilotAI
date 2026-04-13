@@ -9,6 +9,7 @@ app = FastAPI(
 )
 
 
+
 @app.get("/")
 def read_root() -> Dict[str, str]:
     return {

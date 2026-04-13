@@ -1,0 +1,2 @@
+class SecurityAgent:
+    pass

@@ -1,0 +1,2 @@
+class DocumentationAgent:
+    pass
