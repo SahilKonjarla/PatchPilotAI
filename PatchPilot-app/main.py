@@ -22,4 +22,4 @@ def read_root() -> Dict[str, str]:
 def health_check() -> Dict[str, str]:
     return {"status": "ok"}
 
-app.include_router(webhook_router, prefix="/webhook")
+app.include_router(webhook_router)

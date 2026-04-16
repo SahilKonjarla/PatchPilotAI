@@ -8,9 +8,10 @@ from utils.payload_parser import parse_github_event
 from agents.orchestrator_agent import Orchestrator
 
 orchestrator = Orchestrator()
+config = ConfigUtils()
 
 def _verify_signature(payload: bytes, signature: str) -> bool:
-    mac = hmac.new(ConfigUtils.get("GITHUB_WEBHOOK_SECRET").encode(), payload, hashlib.sha256)
+    mac = hmac.new(config.get("GITHUB_WEBHOOK_SECRET").encode(), payload, hashlib.sha256)
     expected = "sha256=" + mac.hexdigest()
     return hmac.compare_digest(expected, signature)
 

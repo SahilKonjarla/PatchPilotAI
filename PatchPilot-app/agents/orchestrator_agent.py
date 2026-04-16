@@ -26,7 +26,7 @@ class Orchestrator:
 
         return self._execute_workflow(workflow, request)
 
-
+    @staticmethod
     def _should_act(self, request: GitHubEventRequest) -> bool:
         if request.event_type == "issue_comment":
             return request.comment_body and request.comment_body.startswith("/")
@@ -36,7 +36,7 @@ class Orchestrator:
 
         return False
 
-
+    @staticmethod
     def _select_workflow(self, request: GitHubEventRequest) -> str:
         if request.event_type == "issue_comment":
             comment = request.comment_body.lower()
