@@ -16,8 +16,7 @@ class ConfigUtils:
             "GITHUB_PRIVATE_KEY_PATH",
             "GITHUB_PRIVATE_KEY",
             "OPENAI_API_KEY",
-            "OPENAI_MODEL",
-            "OPENAI_BASE_URL",
+            "OPENAI_MODEL"
         ]
         # Create a dictionary to store them
         self.env_vars = {}

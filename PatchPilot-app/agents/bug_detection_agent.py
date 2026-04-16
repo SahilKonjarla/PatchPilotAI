@@ -3,16 +3,17 @@ from typing import List
 
 from utils.config_utils import ConfigUtils
 from utils.prompts import PromptUtils
-
 from service.github_diff import GithubDiff
 from service.github_auth import get_installation_token
+
+config = ConfigUtils()
 
 class BugDetectionAgent:
     def __init__(self):
         self.client = OpenAI(
-            api_key=ConfigUtils.get("OPEN_API_KEY")
+            api_key=config.get("OPEN_API_KEY")
         )
-        self.model = ConfigUtils.get("OPEN_API_MODEL")
+        self.model = config.get("OPEN_API_MODEL")
         # Limits
         self.max_chars_per_chunk = 4000
         self.max_chunks = 3

@@ -6,13 +6,15 @@ from service.github_diff import GithubDiff
 from utils.config_utils import ConfigUtils
 from utils.prompts import PromptUtils
 
+config = ConfigUtils()
+
 
 class CodeReviewAgent:
     def __init__(self):
         self.client = OpenAI(
-            api_key=ConfigUtils.get("OPENAI_API_KEY")
+            api_key=config.get("OPENAI_API_KEY")
         )
-        self.model = ConfigUtils.get("OPENAI_MODEL")
+        self.model = config.get("OPENAI_MODEL")
         self.max_chunks = 3
         self.max_chars_per_chunk = 4000
 
