@@ -49,11 +49,9 @@ class BugDetectionAgent:
 
         return chunks
 
-    @staticmethod
     def _build_prompt(self, diff_chunk: str) -> str:
         return PromptUtils.bug_detection_prompt(diff_chunk)
 
-    @staticmethod
     def _aggregate_responses(self, responses: List[str]) -> str:
         return "\n\n---\n\n".join(responses)
 

@@ -54,7 +54,6 @@ class CodeReviewAgent:
             max_chars=self.max_chars_per_chunk
         )
 
-    @staticmethod
     def _build_prompt(self, diff_chunk: str) -> str:
         return PromptUtils.code_review_prompt(diff_chunk)
 
@@ -76,7 +75,6 @@ class CodeReviewAgent:
 
         return response.choices[0].message.content.strip()
 
-    @staticmethod
     def _aggregate_responses(self, responses: List[str]) -> str:
         cleaned_responses = [response.strip() for response in responses if response and response.strip()]
 

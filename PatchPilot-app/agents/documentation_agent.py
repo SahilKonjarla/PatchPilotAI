@@ -18,9 +18,6 @@ class DocumentationAgent:
         self.max_chunks = 3
         self.max_chars_per_chunk = 4000
 
-    # -------------------------
-    # Public Entry
-    # -------------------------
     def run(self, request) -> str:
         diff_chunks = self._extract_diff_chunks(request)
 
@@ -57,7 +54,6 @@ class DocumentationAgent:
             max_chars=self.max_chars_per_chunk
         )
 
-    @staticmethod
     def _build_prompt(self, diff_chunk: str) -> str:
         return PromptUtils.document_prompt(diff_chunk)
 
@@ -79,7 +75,6 @@ class DocumentationAgent:
 
         return response.choices[0].message.content.strip()
 
-    @staticmethod
     def _aggregate_responses(self, responses: List[str]) -> str:
         cleaned = [r.strip() for r in responses if r and r.strip()]
 

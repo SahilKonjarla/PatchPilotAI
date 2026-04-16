@@ -14,9 +14,11 @@ class GitHubClient:
         }
 
     def post_comment(self, body: str):
+        print("[GITHUB] Posting comment to PR", self.pr_number)
         url = f"https://api.github.com/repos/{self.owner}/{self.repo}/issues/{self.pr_number}/comments"
 
         res = requests.post(url, headers=self._headers(), json={"body": body})
+        print("[GITHUB] Status:", res.status_code)
 
-        if res.status_code not in [200, 201]:
-            raise Exception(res.text)
+    if res.status_code not in [200, 201]:
+        print("[GITHUB] Error:", res.text)
