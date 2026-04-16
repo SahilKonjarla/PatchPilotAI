@@ -23,6 +23,9 @@ async def github_webhook(request: Request):
         raise HTTPException(status_code=401, detail="Invalid signature")
 
     event= request.headers.get("X-GitHub-Event")
+    if event == "action":
+        return {"status": "ignored"}
+
     payload = await request.json()
 
     parsed_request = parse_github_event(event, payload)
