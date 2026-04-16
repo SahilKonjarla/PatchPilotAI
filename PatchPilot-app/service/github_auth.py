@@ -4,9 +4,11 @@ import requests
 
 from utils.config_utils import ConfigUtils
 
+config = ConfigUtils()
+
 def generate_jwt():
-    app_id = ConfigUtils.get("GITHUB_APP_ID")
-    private_key_path = ConfigUtils.get("GITHUB_PRIVATE_KEY_PATH")
+    app_id = config.get("GITHUB_APP_ID")
+    private_key_path = config.get("GITHUB_PRIVATE_KEY_PATH")
 
     with open(private_key_path, "r") as f:
         private_key = f.read()
@@ -22,7 +24,7 @@ def generate_jwt():
 
 def get_installation_token():
     jwt_token = generate_jwt()
-    install_id = ConfigUtils.get("GITHUB_INSTALL_ID")
+    install_id = config.get("GITHUB_INSTALL_ID")
 
     url = f"https://api.github.com/app/installations/{install_id}/access_tokens"
 
