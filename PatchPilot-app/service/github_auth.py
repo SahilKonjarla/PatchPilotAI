@@ -22,11 +22,11 @@ def generate_jwt():
     encoded_jwt = jwt.encode(payload, private_key, algorithm="RS256")
     return encoded_jwt
 
-def get_installation_token():
+def get_installation_token(installation_id: int):
     jwt_token = generate_jwt()
     install_id = config.get("GITHUB_INSTALL_ID")
 
-    url = f"https://api.github.com/app/installations/{install_id}/access_tokens"
+    url = f"https://api.github.com/app/installations/{installation_id}/access_tokens"
 
     headers = {
         "Authorization": f"Bearer {jwt_token}",

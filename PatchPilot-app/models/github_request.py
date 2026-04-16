@@ -19,6 +19,7 @@ class GitHubEventRequest(BaseModel):
     pr_body: Optional[str] = None
 
     comment_body: Optional[str] = None
+    installation_id: int | None = None
 
     # raw payload (for flexibility/debugging)
     raw_payload: Dict[str, Any]

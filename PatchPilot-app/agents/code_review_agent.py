@@ -7,7 +7,7 @@ from utils.config_utils import ConfigUtils
 from utils.prompts import PromptUtils
 
 config = ConfigUtils()
-
+prompt_utils = PromptUtils()
 
 class CodeReviewAgent:
     def __init__(self):
@@ -33,10 +33,7 @@ class CodeReviewAgent:
         return self._aggregate_responses(responses)
 
     def _extract_diff_chunks(self, request) -> List[str]:
-        if not request.pr_number:
-            return []
-
-        token = get_installation_token()
+        token = get_installation_token(request.installation_id)
 
         diff_service = GithubDiff(
             token=token,
@@ -44,7 +41,13 @@ class CodeReviewAgent:
             repo=request.repo_name
         )
 
-        raw_diff = diff_service.fetch_pr_diff(request.pr_number)
+        if request.pr_number:
+            raw_diff = diff_service.fetch_pr_diff(request.pr_number)
+        elif request.commit_id:
+            raw_diff = diff_service.fetch_commit_diff(request.commit_id)
+        else:
+            return []
+
         file_diffs = diff_service.split_diff_by_file(raw_diff)
         filtered_diffs = diff_service.filter_files(file_diffs)
 
@@ -55,7 +58,7 @@ class CodeReviewAgent:
         )
 
     def _build_prompt(self, diff_chunk: str) -> str:
-        return PromptUtils.code_review_prompt(diff_chunk)
+        return prompt_utils.code_review_prompt(diff_chunk)
 
     def _call_llm(self, prompt: str) -> str:
         response = self.client.chat.completions.create(
@@ -63,7 +66,7 @@ class CodeReviewAgent:
             messages=[
                 {
                     "role": "system",
-                    "content": PromptUtils.code_review_sys()
+                    "content": prompt_utils.code_review_sys()
                 },
                 {
                     "role": "user",
@@ -74,7 +77,6 @@ class CodeReviewAgent:
         )
 
         return response.choices[0].message.content.strip()
-
     def _aggregate_responses(self, responses: List[str]) -> str:
         cleaned_responses = [response.strip() for response in responses if response and response.strip()]
 

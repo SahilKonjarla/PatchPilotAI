@@ -21,9 +21,9 @@ class Orchestrator:
     def run(self, request: GitHubEventRequest) -> AgentResponse:
         print(f"[ORCH] Received event: {request.event_type}")
 
-        self._should_act(request)
+        should_act = self._should_act(request)
         print(f"[ORCH] Should act: {should_act}")
-        if not self._should_act(request):
+        if not should_act:
             return self._empty_response("No action taken")
 
         workflow = self._select_workflow(request)
@@ -31,7 +31,10 @@ class Orchestrator:
 
         return self._execute_workflow(workflow, request)
 
-    def _should_act(self, request: GitHubEventRequest) -> bool:
+    def _should_act(self, request):
+        if request.event_type == "push":
+            return True
+
         if request.event_type == "issue_comment":
             return request.comment_body and request.comment_body.startswith("/")
 
@@ -41,6 +44,9 @@ class Orchestrator:
         return False
 
     def _select_workflow(self, request: GitHubEventRequest) -> str:
+        if request.event_type == "push":
+            return "push_analysis"
+
         if request.event_type == "issue_comment":
             comment = request.comment_body.lower()
 
@@ -65,6 +71,9 @@ class Orchestrator:
     def _execute_workflow(self, workflow: str, request: GitHubEventRequest) -> AgentResponse:
         if workflow == "full_review":
             return self._run_full_review_pipeline(request)
+
+        if workflow == "push_analysis":
+            return self._run_push_analysis(request)
 
         if workflow == "summary":
             return self._run_summary(request)
@@ -121,6 +130,23 @@ class Orchestrator:
                 AgentAction(
                     type="comment",
                     content=combined_output.strip()
+                )
+            ]
+        )
+
+    def _run_push_analysis(self, request):
+        print("[ORCH] Running push analysis")
+
+        summary = self.pr_summary_agent.run(request)
+
+        return AgentResponse(
+            success=True,
+            message="Push analyzed",
+            agent_used="push_pipeline",
+            actions=[
+                AgentAction(
+                    type="commit_comment",
+                    content=summary
                 )
             ]
         )

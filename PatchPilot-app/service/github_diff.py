@@ -15,7 +15,7 @@ class GithubDiff:
     def fetch_pr_diff(self, pr_number: int) -> str:
         url = f"https://api.github.com/repos/{self.owner}/{self.repo}/pulls/{pr_number}"
 
-        response = requests.get(url, headers=self._headers())
+        response = requests.get(url, headers=self.headers())
 
         if response.status_code != 200:
             raise Exception(f"Failed to fetch PR diff: {response.text}")
@@ -62,3 +62,18 @@ class GithubDiff:
             selected.append(file_diff[:max_chars])
 
         return selected
+
+    def fetch_commit_diff(self, commit_sha):
+        url = f"https://api.github.com/repos/{self.owner}/{self.repo}/commits/{commit_sha}"
+
+        headers = {
+            "Authorization": f"token {self.token}",
+            "Accept": "application/vnd.github.v3.diff"
+        }
+
+        res = requests.get(url, headers=headers)
+
+        if res.status_code != 200:
+            raise Exception(res.text)
+
+        return res.text

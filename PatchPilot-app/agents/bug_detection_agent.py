@@ -7,6 +7,7 @@ from service.github_diff import GithubDiff
 from service.github_auth import get_installation_token
 
 config = ConfigUtils()
+prompt_utils = PromptUtils()
 
 class BugDetectionAgent:
     def __init__(self):
@@ -22,7 +23,7 @@ class BugDetectionAgent:
         resp = self.client.chat.completions.create(
             model=self.model,
             messages=[
-                {"role": "system", "content": PromptUtils.bug_detection_sys()},
+                {"role": "system", "content": prompt_utils.bug_detection_sys()},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.2
@@ -30,9 +31,8 @@ class BugDetectionAgent:
 
         return resp.choices[0].message.content
 
-    @staticmethod
-    def _extract_diff(self, request):
-        token = get_installation_token()
+    def _extract_diff_chunks(self, request) -> List[str]:
+        token = get_installation_token(request.installation_id)
 
         diff_service = GithubDiff(
             token=token,
@@ -40,17 +40,24 @@ class BugDetectionAgent:
             repo=request.repo_name
         )
 
-        raw_diff = diff_service.fetch_pr_diff(request.pr_number)
+        if request.pr_number:
+            raw_diff = diff_service.fetch_pr_diff(request.pr_number)
+        elif request.commit_id:
+            raw_diff = diff_service.fetch_commit_diff(request.commit_id)
+        else:
+            return []
 
         file_diffs = diff_service.split_diff_by_file(raw_diff)
-        filtered = diff_service.filter_files(file_diffs)
+        filtered_diffs = diff_service.filter_files(file_diffs)
 
-        chunks = diff_service.select_relevant_chunks(filtered)
-
-        return chunks
+        return diff_service.select_relevant_chunks(
+            filtered_diffs,
+            max_chunks=self.max_chunks,
+            max_chars=self.max_chars_per_chunk
+        )
 
     def _build_prompt(self, diff_chunk: str) -> str:
-        return PromptUtils.bug_detection_prompt(diff_chunk)
+        return prompt_utils.bug_detection_prompt(diff_chunk)
 
     def _aggregate_responses(self, responses: List[str]) -> str:
         return "\n\n---\n\n".join(responses)

@@ -7,6 +7,7 @@ from utils.config_utils import ConfigUtils
 from utils.prompts import PromptUtils
 
 config = ConfigUtils()
+prompt_utils = PromptUtils()
 
 class PRSummaryAgent:
     def __init__(self):
@@ -27,21 +28,18 @@ class PRSummaryAgent:
         # Step 1: summarize each chunk
         chunk_summaries = []
         for chunk in diff_chunks:
-            prompt = PromptUtils.pr_summary_prompt(chunk)
+            prompt = prompt_utils.pr_summary_prompt(chunk)
             response = self._call_llm(prompt)
             chunk_summaries.append(response)
 
         # Step 2: aggregate into final PR summary
-        final_prompt = PromptUtils.pr_summary_aggregate_prompt(chunk_summaries)
+        final_prompt = prompt_utils.pr_summary_aggregate_prompt(chunk_summaries)
         final_summary = self._call_llm(final_prompt)
 
         return final_summary
 
     def _extract_diff_chunks(self, request) -> List[str]:
-        if not request.pr_number:
-            return []
-
-        token = get_installation_token()
+        token = get_installation_token(request.installation_id)
 
         diff_service = GithubDiff(
             token=token,
@@ -49,12 +47,18 @@ class PRSummaryAgent:
             repo=request.repo_name
         )
 
-        raw_diff = diff_service.fetch_pr_diff(request.pr_number)
+        if request.pr_number:
+            raw_diff = diff_service.fetch_pr_diff(request.pr_number)
+        elif request.commit_id:
+            raw_diff = diff_service.fetch_commit_diff(request.commit_id)
+        else:
+            return []
+
         file_diffs = diff_service.split_diff_by_file(raw_diff)
-        filtered = diff_service.filter_files(file_diffs)
+        filtered_diffs = diff_service.filter_files(file_diffs)
 
         return diff_service.select_relevant_chunks(
-            filtered,
+            filtered_diffs,
             max_chunks=self.max_chunks,
             max_chars=self.max_chars_per_chunk
         )
@@ -65,7 +69,7 @@ class PRSummaryAgent:
             messages=[
                 {
                     "role": "system",
-                    "content": PromptUtils.pr_sys()
+                    "content": prompt_utils.pr_sys()
                 },
                 {
                     "role": "user",

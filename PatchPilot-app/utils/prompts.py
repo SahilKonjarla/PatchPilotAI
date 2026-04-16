@@ -1,7 +1,7 @@
 
 class PromptUtils:
-    def __init__(self, prompt : str | None):
-        self.prompt = None if prompt is None else prompt
+    def __init__(self):
+        pass
 
     def bug_detection_sys(self):
         return """
@@ -10,8 +10,7 @@ class PromptUtils:
         Be concise, precise, and actionable.
         """
 
-    @staticmethod
-    def bug_detection_prompt(diff_chunk):
+    def bug_detection_prompt(self, diff_chunk):
         return f"""
         Analyze the following code diff and identify potential bugs.
 
@@ -32,8 +31,7 @@ class PromptUtils:
         Be concise, specific, and actionable.
         """
 
-    @staticmethod
-    def code_review_prompt(diff_chunk: str) -> str:
+    def code_review_prompt(self, diff_chunk: str) -> str:
         return f"""
         Review the following code diff.
 
@@ -76,8 +74,7 @@ class PromptUtils:
         Output should be structured, concise, and easy to scan.
         """
 
-    @staticmethod
-    def diff_analysis_prompt(diff_chunk: str) -> str:
+    def diff_analysis_prompt(self, diff_chunk: str) -> str:
         return f"""
         Analyze the following code diff.
 
@@ -111,8 +108,7 @@ class PromptUtils:
         Do not speculate beyond the diff.
         """
 
-    @staticmethod
-    def document_prompt(diff_chunk: str) -> str:
+    def document_prompt(self, diff_chunk: str) -> str:
         return f"""
         Generate developer-facing documentation for the following code diff.
 
@@ -145,8 +141,7 @@ class PromptUtils:
         Do not hallucinate details not supported by the diff.
         """
 
-    @staticmethod
-    def pr_summary_prompt(diff_chunk: str) -> str:
+    def pr_summary_prompt(self, diff_chunk: str) -> str:
         return f"""
         Summarize the following portion of a pull request diff.
 
@@ -162,8 +157,7 @@ class PromptUtils:
         {diff_chunk}
         """
 
-    @staticmethod
-    def pr_summary_aggregate_prompt(chunk_summaries: list) -> str:
+    def pr_summary_aggregate_prompt(self, chunk_summaries: list) -> str:
         joined = "\n".join(chunk_summaries)
 
         return f"""

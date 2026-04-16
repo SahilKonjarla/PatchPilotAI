@@ -1,18 +1,21 @@
 from models.github_request import GitHubEventRequest
 
 def parse_github_event(event: str, payload: dict) -> GitHubEventRequest:
+    repo = payload.get("repository", {})
+
     base = {
         "event_type": event,
-        "repo_name": payload["repository"]["name"],
-        "repo_owner": payload["repository"]["owner"]["login"],
-        "sender": payload["sender"]["login"],
+        "repo_name": repo.get("name"),
+        "repo_owner": repo.get("owner", {}).get("login"),
+        "sender": payload.get("sender", {}).get("login"),
+        "installation_id": payload.get("installation", {}).get("id"),  # <-- ADD THIS
         "raw_payload": payload
     }
 
     if event == "push":
         base.update({
-            "branch": payload["ref"].split("/")[-1],
-            "commit_id": payload["head_commit"]["id"]
+            "branch": payload.get("ref", "").split("/")[-1],
+            "commit_id": payload.get("head_commit", {}).get("id")
         })
 
     elif event == "pull_request":

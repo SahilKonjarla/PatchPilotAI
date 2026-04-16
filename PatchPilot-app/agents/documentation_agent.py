@@ -7,6 +7,7 @@ from utils.config_utils import ConfigUtils
 from utils.prompts import PromptUtils
 
 config = ConfigUtils()
+prompt_utils = PromptUtils()
 
 class DocumentationAgent:
     def __init__(self):
@@ -33,10 +34,7 @@ class DocumentationAgent:
         return self._aggregate_responses(responses)\
 
     def _extract_diff_chunks(self, request) -> List[str]:
-        if not request.pr_number:
-            return []
-
-        token = get_installation_token()
+        token = get_installation_token(request.installation_id)
 
         diff_service = GithubDiff(
             token=token,
@@ -44,18 +42,24 @@ class DocumentationAgent:
             repo=request.repo_name
         )
 
-        raw_diff = diff_service.fetch_pr_diff(request.pr_number)
+        if request.pr_number:
+            raw_diff = diff_service.fetch_pr_diff(request.pr_number)
+        elif request.commit_id:
+            raw_diff = diff_service.fetch_commit_diff(request.commit_id)
+        else:
+            return []
+
         file_diffs = diff_service.split_diff_by_file(raw_diff)
-        filtered = diff_service.filter_files(file_diffs)
+        filtered_diffs = diff_service.filter_files(file_diffs)
 
         return diff_service.select_relevant_chunks(
-            filtered,
+            filtered_diffs,
             max_chunks=self.max_chunks,
             max_chars=self.max_chars_per_chunk
         )
 
     def _build_prompt(self, diff_chunk: str) -> str:
-        return PromptUtils.document_prompt(diff_chunk)
+        return prompt_utils.document_prompt(diff_chunk)
 
     def _call_llm(self, prompt: str) -> str:
         response = self.client.chat.completions.create(
@@ -63,7 +67,7 @@ class DocumentationAgent:
             messages=[
                 {
                     "role": "system",
-                    "content": PromptUtils.document_sys()
+                    "content": prompt_utils.document_sys()
                 },
                 {
                     "role": "user",

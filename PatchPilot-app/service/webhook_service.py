@@ -3,9 +3,11 @@ import hmac
 import hashlib
 
 from utils.config_utils import ConfigUtils
-from models.github_request import GitHubEventRequest
 from utils.payload_parser import parse_github_event
 from agents.orchestrator_agent import Orchestrator
+from service.github_auth import get_installation_token
+from service.github_client import GitHubClient
+from service.executor import execute_actions
 
 orchestrator = Orchestrator()
 config = ConfigUtils()
@@ -31,13 +33,15 @@ async def github_webhook(request: Request):
 
     parsed_request = parse_github_event(event, payload)
     print(f"[WEBHOOK] Parsed: repo={parsed_request.repo_name}, pr={parsed_request.pr_number}")
+    print("[WEBHOOK] Commit ID:", parsed_request.commit_id)
+    print("[WEBHOOK] Installation ID:", parsed_request.installation_id)
 
     agent_response = orchestrator.run(parsed_request)
     print(f"[WEBHOOK] Actions: {len(agent_response.actions)}")
 
     if agent_response.actions:
-        token = get_installation_token()
+        token = get_installation_token(parsed_request.installation_id)
         github_client = GitHubClient(token, parsed_request)
-        execute_actions(agent_response.actions, github_client)
+        execute_actions(agent_response.actions, github_client, parsed_request)
 
     return {"message": "okay"}

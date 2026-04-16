@@ -20,5 +20,21 @@ class GitHubClient:
         res = requests.post(url, headers=self._headers(), json={"body": body})
         print("[GITHUB] Status:", res.status_code)
 
-    if res.status_code not in [200, 201]:
-        print("[GITHUB] Error:", res.text)
+        if res.status_code not in [200, 201]:
+            print("[GITHUB] Error:", res.text)
+
+    def post_commit_comment(self, commit_sha: str, body: str):
+        print("[GITHUB] Posting commit comment:", commit_sha)
+
+        url = f"https://api.github.com/repos/{self.owner}/{self.repo}/commits/{commit_sha}/comments"
+
+        res = requests.post(
+            url,
+            headers=self._headers(),
+            json={"body": body}
+        )
+
+        print("[GITHUB] Commit comment status:", res.status_code)
+
+        if res.status_code not in [200, 201]:
+            print("[GITHUB] Commit comment error:", res.text)

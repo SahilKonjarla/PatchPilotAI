@@ -7,6 +7,7 @@ from utils.config_utils import ConfigUtils
 from utils.prompts import PromptUtils
 
 config = ConfigUtils()
+prompt_utils = PromptUtils()
 
 class DiffAnalysisAgent:
     def __init__(self):
@@ -31,11 +32,9 @@ class DiffAnalysisAgent:
 
         return self._aggregate_responses(responses)
 
-    def _extract_diff_chunks(self, request) -> List[str]:
-        if not request.pr_number:
-            return []
 
-        token = get_installation_token()
+    def _extract_diff_chunks(self, request) -> List[str]:
+        token = get_installation_token(request.installation_id)
 
         diff_service = GithubDiff(
             token=token,
@@ -43,7 +42,13 @@ class DiffAnalysisAgent:
             repo=request.repo_name
         )
 
-        raw_diff = diff_service.fetch_pr_diff(request.pr_number)
+        if request.pr_number:
+            raw_diff = diff_service.fetch_pr_diff(request.pr_number)
+        elif request.commit_id:
+            raw_diff = diff_service.fetch_commit_diff(request.commit_id)
+        else:
+            return []
+
         file_diffs = diff_service.split_diff_by_file(raw_diff)
         filtered_diffs = diff_service.filter_files(file_diffs)
 
@@ -54,7 +59,7 @@ class DiffAnalysisAgent:
         )
 
     def _build_prompt(self, diff_chunk: str):
-        return PromptUtils.diff_analysis_prompt(diff_chunk)
+        return prompt_utils.diff_analysis_prompt(diff_chunk)
 
     def _call_llm(self, prompt: str) -> str:
         response = self.client.chat.completions.create(
@@ -62,7 +67,7 @@ class DiffAnalysisAgent:
             messages=[
                 {
                     "role": "system",
-                    "content": PromptUtils.diff_analysis_sys()
+                    "content": prompt_utils.diff_analysis_sys()
                 },
                 {
                     "role": "user",
