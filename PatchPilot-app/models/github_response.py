@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class AgentAction(BaseModel):
     type: str  # "comment", "commit", "none"
@@ -12,7 +12,7 @@ class AgentResponse(BaseModel):
     success: bool
     message: str
 
-    actions: List[AgentAction] = []
+    actions: List[AgentAction] = Field(default_factory=list)
 
     # metadata for logging/debugging
     agent_used: Optional[str] = None

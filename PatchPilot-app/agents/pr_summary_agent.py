@@ -1,11 +1,14 @@
-import openai
+import logging
 from typing import List
+
+import openai
 
 from service.github_auth import get_installation_token
 from service.github_diff import GithubDiff
 from utils.config_utils import ConfigUtils
 from utils.prompts import PromptUtils
 
+logger = logging.getLogger(__name__)
 config = ConfigUtils()
 prompt_utils = PromptUtils()
 
@@ -20,6 +23,7 @@ class PRSummaryAgent:
         self.max_chars_per_chunk = 4000
 
     def run(self, request) -> str:
+        logger.info("Running PR summary agent")
         diff_chunks = self._extract_diff_chunks(request)
 
         if not diff_chunks:
@@ -27,7 +31,8 @@ class PRSummaryAgent:
 
         # Step 1: summarize each chunk
         chunk_summaries = []
-        for chunk in diff_chunks:
+        for index, chunk in enumerate(diff_chunks, start=1):
+            logger.info("Summarizing diff chunk %s/%s", index, len(diff_chunks))
             prompt = prompt_utils.pr_summary_prompt(chunk)
             response = self._call_llm(prompt)
             chunk_summaries.append(response)
@@ -64,19 +69,23 @@ class PRSummaryAgent:
         )
 
     def _call_llm(self, prompt: str) -> str:
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": prompt_utils.pr_sys()
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            temperature=0.2
-        )
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": prompt_utils.pr_sys()
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.2
+            )
+        except Exception as exc:
+            logger.exception("PR summary LLM call failed")
+            raise RuntimeError("PR summary LLM call failed") from exc
 
-        return response.choices[0].message.content.strip()
+        return (response.choices[0].message.content or "").strip()

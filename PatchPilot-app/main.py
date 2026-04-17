@@ -2,6 +2,9 @@ from typing import Dict
 
 from fastapi import FastAPI
 from routes.webhook_router import webhook_router
+from utils.logging_utils import configure_logging
+
+configure_logging()
 
 app = FastAPI(
     title="PatchPilotAI",

@@ -1,35 +1,41 @@
-from openai import OpenAI
+import logging
 from typing import List
 
+from openai import OpenAI
+
+from service.github_auth import get_installation_token
+from service.github_diff import GithubDiff
 from utils.config_utils import ConfigUtils
 from utils.prompts import PromptUtils
-from service.github_diff import GithubDiff
-from service.github_auth import get_installation_token
 
+logger = logging.getLogger(__name__)
 config = ConfigUtils()
 prompt_utils = PromptUtils()
 
 class BugDetectionAgent:
     def __init__(self):
         self.client = OpenAI(
-            api_key=config.get("OPEN_API_KEY")
+            api_key=config.get("OPENAI_API_KEY")
         )
-        self.model = config.get("OPEN_API_MODEL")
-        # Limits
+        self.model = config.get("OPENAI_MODEL")
         self.max_chars_per_chunk = 4000
         self.max_chunks = 3
 
     def _call_llm(self, prompt):
-        resp = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": prompt_utils.bug_detection_sys()},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.2
-        )
+        try:
+            resp = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": prompt_utils.bug_detection_sys()},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.2
+            )
+        except Exception as exc:
+            logger.exception("Bug detection LLM call failed")
+            raise RuntimeError("Bug detection LLM call failed") from exc
 
-        return resp.choices[0].message.content
+        return (resp.choices[0].message.content or "").strip()
 
     def _extract_diff_chunks(self, request) -> List[str]:
         token = get_installation_token(request.installation_id)
@@ -60,20 +66,24 @@ class BugDetectionAgent:
         return prompt_utils.bug_detection_prompt(diff_chunk)
 
     def _aggregate_responses(self, responses: List[str]) -> str:
-        return "\n\n---\n\n".join(responses)
+        cleaned = [response.strip() for response in responses if response and response.strip()]
+        if not cleaned:
+            return "No bug findings generated."
+        return "\n\n---\n\n".join(cleaned)
 
     def run(self, request) -> str:
-        chunks = self._extract_diff(request)
+        logger.info("Running bug detection agent")
+        chunks = self._extract_diff_chunks(request)
 
         if not chunks:
             return "No relevant code changes to analyze."
 
         responses = []
 
-        for chunk in chunks:
+        for index, chunk in enumerate(chunks, start=1):
+            logger.info("Analyzing bug detection chunk %s/%s", index, len(chunks))
             prompt = self._build_prompt(chunk)
             response = self._call_llm(prompt)
             responses.append(response)
 
         return self._aggregate_responses(responses)
-

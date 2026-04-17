@@ -1,11 +1,14 @@
-import openai
+import logging
 from typing import List
+
+import openai
 
 from service.github_auth import get_installation_token
 from service.github_diff import GithubDiff
 from utils.config_utils import ConfigUtils
 from utils.prompts import PromptUtils
 
+logger = logging.getLogger(__name__)
 config = ConfigUtils()
 prompt_utils = PromptUtils()
 
@@ -20,18 +23,20 @@ class DocumentationAgent:
         self.max_chars_per_chunk = 4000
 
     def run(self, request) -> str:
+        logger.info("Running documentation agent")
         diff_chunks = self._extract_diff_chunks(request)
 
         if not diff_chunks:
             return "No relevant code changes to document."
 
         responses = []
-        for chunk in diff_chunks:
+        for index, chunk in enumerate(diff_chunks, start=1):
+            logger.info("Documenting chunk %s/%s", index, len(diff_chunks))
             prompt = self._build_prompt(chunk)
             response = self._call_llm(prompt)
             responses.append(response)
 
-        return self._aggregate_responses(responses)\
+        return self._aggregate_responses(responses)
 
     def _extract_diff_chunks(self, request) -> List[str]:
         token = get_installation_token(request.installation_id)
@@ -62,22 +67,26 @@ class DocumentationAgent:
         return prompt_utils.document_prompt(diff_chunk)
 
     def _call_llm(self, prompt: str) -> str:
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": prompt_utils.document_sys()
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            temperature=0.3
-        )
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": prompt_utils.document_sys()
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.3
+            )
+        except Exception as exc:
+            logger.exception("Documentation LLM call failed")
+            raise RuntimeError("Documentation LLM call failed") from exc
 
-        return response.choices[0].message.content.strip()
+        return (response.choices[0].message.content or "").strip()
 
     def _aggregate_responses(self, responses: List[str]) -> str:
         cleaned = [r.strip() for r in responses if r and r.strip()]

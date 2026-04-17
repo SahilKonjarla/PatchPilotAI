@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 config = ConfigUtils()
 prompt_utils = PromptUtils()
 
-class CodeReviewAgent:
+
+class TestCoverageAgent:
     def __init__(self):
         self.client = OpenAI(
             api_key=config.get("OPENAI_API_KEY")
@@ -22,17 +23,16 @@ class CodeReviewAgent:
         self.max_chars_per_chunk = 4000
 
     def run(self, request) -> str:
-        logger.info("Running code review agent")
+        logger.info("Running test coverage agent")
         diff_chunks = self._extract_diff_chunks(request)
 
         if not diff_chunks:
-            return "No relevant code changes found for review."
+            return "No relevant code changes found for test coverage review."
 
         responses = []
         for index, diff_chunk in enumerate(diff_chunks, start=1):
-            logger.info("Reviewing code chunk %s/%s", index, len(diff_chunks))
-            prompt = self._build_prompt(diff_chunk)
-            response = self._call_llm(prompt)
+            logger.info("Reviewing test coverage chunk %s/%s", index, len(diff_chunks))
+            response = self._call_llm(prompt_utils.test_coverage_prompt(diff_chunk))
             responses.append(response)
 
         return self._aggregate_responses(responses)
@@ -62,35 +62,24 @@ class CodeReviewAgent:
             max_chars=self.max_chars_per_chunk
         )
 
-    def _build_prompt(self, diff_chunk: str) -> str:
-        return prompt_utils.code_review_prompt(diff_chunk)
-
     def _call_llm(self, prompt: str) -> str:
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {
-                        "role": "system",
-                        "content": prompt_utils.code_review_sys()
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
+                    {"role": "system", "content": prompt_utils.test_coverage_sys()},
+                    {"role": "user", "content": prompt},
                 ],
-                temperature=0.2
+                temperature=0.2,
             )
         except Exception as exc:
-            logger.exception("Code review LLM call failed")
-            raise RuntimeError("Code review LLM call failed") from exc
+            logger.exception("Test coverage LLM call failed")
+            raise RuntimeError("Test coverage LLM call failed") from exc
 
         return (response.choices[0].message.content or "").strip()
 
     def _aggregate_responses(self, responses: List[str]) -> str:
-        cleaned_responses = [response.strip() for response in responses if response and response.strip()]
-
-        if not cleaned_responses:
-            return "No review feedback generated."
-
-        return "\n\n---\n\n".join(cleaned_responses)
+        cleaned = [response.strip() for response in responses if response and response.strip()]
+        if not cleaned:
+            return "No test coverage findings generated."
+        return "\n\n---\n\n".join(cleaned)
